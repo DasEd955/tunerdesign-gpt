@@ -17,6 +17,8 @@ class Solution:
         #   'db1':   1D list (gradient w.r.t. b1, rounded to 4 decimals)
         #   'dW2':   2D list (gradient w.r.t. W2, rounded to 4 decimals)
         #   'db2':   1D list (gradient w.r.t. b2, rounded to 4 decimals)
+
+        # Convert inputs to NumPy arrays
         x = np.array(x)
         W1 = np.array(W1)
         b1 = np.array(b1)
@@ -24,13 +26,13 @@ class Solution:
         b2 = np.array(b2)
         y_true = np.array(y_true)
 
-        # Forward pass
+        # Forward Pass -> Computes predictions
         z1 = x @ W1.T + b1
         a1 = np.maximum(0, z1)
         z2 = a1 @ W2.T + b2
         loss = np.mean((z2 - y_true) ** 2)
 
-        # Backward pass
+        # Backward Pass (Backpropagation) -> Computes gradients
         n = len(y_true) if y_true.ndim > 0 else 1
         dz2 = 2 * (z2 - y_true) / n
         dW2 = dz2.reshape(-1, 1) @ a1.reshape(1, -1)
