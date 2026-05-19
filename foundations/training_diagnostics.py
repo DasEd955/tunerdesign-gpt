@@ -55,14 +55,18 @@ class Solution:
         for s in activation_stats:
             if s["dead_fraction"] > 0.5:
                 return "dead_neurons"
+
         for s in gradient_stats:
             if s["norm"] > 1000:
                 return "exploding_gradients"
+
         if gradient_stats and gradient_stats[-1]["norm"] < 1e-5:
             return "vanishing_gradients"
+
         for s in activation_stats:
             if s["std"] < 0.1:
                 return "vanishing_gradients"
             if s["std"] > 10.0:
                 return "exploding_gradients"
+                
         return "healthy"
