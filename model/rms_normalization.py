@@ -9,7 +9,7 @@ class Solution:
         # Return result rounded to 4 decimal places as a list
 
         # Compute Root-Mean-Square (RMS)
-        # Divide by standard deviation
+        # Divide by standard deviation (normalize)
         # Output: Scale by gamma
         rms_x = np.sqrt(np.mean(np.square(x) + eps))
         x_hat = x / rms_x
