@@ -19,7 +19,7 @@ class Solution:
         running_var = np.array(running_var, dtype=np.float64)
 
         # Training Mode:
-            # Compute batch_mean, batch_var, x_hat
+            # Compute batch_mean, batch_var, x_hat (normalize)
             # Update thr unning statistics for later use in inference (running_mean & running_var) 
         if training:
             batch_mean = np.mean(x, axis=0)
@@ -32,7 +32,7 @@ class Solution:
         else:
             x_hat = (x - running_mean) / np.sqrt(running_var + eps)
         
-        # Compute y_out
+        # Compute y_out (scale & shift)
         y_out = gamma * x_hat + beta
 
         # Output: A tuple of 3 values
