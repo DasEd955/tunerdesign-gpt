@@ -10,17 +10,22 @@ class Solution:
         # After each nn.Linear, record: mean, std, dead_fraction
         # Run with torch.no_grad(). Round to 4 decimals.
         stats = list()
+
         with torch.no_grad():
             for module in model.children():
                 x = module(x)
+
                 if isinstance(module, nn.Linear):
                     mean = round(x.mean().item(), 4)
                     std = round(x.std().item(), 4)
+
                     if x.dim() >= 2:
                         dead_frac = round(((x <= 0).all(dim= 0)).float().mean().item(), 4)
                     else:
                         dead_frac = round((x <= 0).float().mean().item(), 4)
+                    
                     stats.append({"mean" : mean, "std" : std, "dead_fraction" : dead_frac})
+        
         return stats 
 
     def compute_gradient_stats(self, model: nn.Module, x: torch.Tensor, y: torch.Tensor) -> List[Dict[str, float]]:
@@ -32,6 +37,7 @@ class Solution:
         loss = nn.MSELoss()(output, y)
         loss.backward()
         stats = list()
+
         for module in model.children():
             if isinstance(module, nn.Linear):
                 grad = module.weight.grad
@@ -39,6 +45,7 @@ class Solution:
                 std = round(grad.std().item(), 4)
                 norm = round(torch.norm(grad).item(), 4)
                 stats.append({"mean" : mean, "std" : std, "norm" : norm})
+
         return stats
 
     def diagnose(self, activation_stats: List[Dict[str, float]], gradient_stats: List[Dict[str, float]]) -> str:
