@@ -1,12 +1,14 @@
-# My GPT — Built from Scratch
+# Tuner Design GPT — Built from Scratch
 
-> Assembled from the NeetCode ML course on [NeetCode.io](https://neetcode.io)
-> Built by **Ed H** on May 14, 2026
+A complete GPT implementation built component by component from first principles in Python.
+Every module in this repository — from gradient descent to multi-headed attention to text
+generation — was written and tested independently before being composed into a working model.
 
-Every file in this project is code I wrote and submitted while completing the NeetCode ML course.
-The problems progressively build from gradient descent fundamentals all the way to a working GPT.
+## Architecture
 
-## Project Structure
+![GPT Architecture](architecture.png)
+
+## Project structure
 
 ```
 model/          Attention, Transformer, GPT architecture
@@ -38,7 +40,25 @@ foundations/    Neural network primitives built from scratch
   training_loop.py, dead_relu_detector.py, ...
 ```
 
-## Quick Start
+## What was built from scratch
+
+**Foundations** — gradient descent, backpropagation, MLP, activation functions,
+loss functions, and a full training loop, all implemented without PyTorch autograd
+to build mechanical understanding before using the framework.
+
+**Data pipeline** — a BPE tokenizer, character-level vocabulary builder, NLP
+preprocessing utilities, a GPT-style dataset class, and a batched data loader
+handling sequence alignment and padding.
+
+**Model architecture** — self-attention, multi-headed attention, grouped query
+attention, three normalization variants (layer, RMS, batch), positional encoding,
+word embeddings, a full transformer block, and the GPT model stacking N blocks
+with a language model head.
+
+**Inference optimization** — KV-cache implementation for fast autoregressive
+generation, avoiding redundant key/value recomputation at each decoding step.
+
+## Quick start
 
 ```bash
 pip install -r requirements.txt
@@ -46,12 +66,6 @@ python train.py
 python generate.py
 ```
 
-## Course
+## Stack
 
-This project was built by completing the [NeetCode ML Course](https://neetcode.io/practice?tab=coreSkills&topic=Machine+Learning):
-- Math Foundations (gradient descent, activations, loss functions)
-- Neural Networks from scratch (neuron, backprop, MLP)
-- PyTorch fundamentals
-- NLP pipeline (embeddings, tokenization, attention)
-- Transformer architecture
-- GPT model + text generation
+Python · PyTorch · NumPy
