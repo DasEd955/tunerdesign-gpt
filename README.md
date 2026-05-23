@@ -1,8 +1,8 @@
 # Tuner Design GPT — Built from Scratch
 
 A complete GPT implementation built component by component from first principles in Python.
-Every module in this repository — from gradient descent to multi-headed attention to text
-generation — was written and tested independently before being composed into a working model.
+Every module in this repository, from gradient descent to multi-headed attention to text
+generation, was written and tested independently before being composed into a working model.
 
 ## Architecture
 
