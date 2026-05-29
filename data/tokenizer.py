@@ -13,27 +13,39 @@ class Solution:
         tokens = list(corpus)
         merges = list()
         for _ in range(num_merges):
+
+            # Edge Case; only 1 token left, no adjacent pair exists
             if len(tokens) < 2:
                 break
+            
+            # Count adjacent pair frequencies
             pairs = dict()
             for i in range(len(tokens) - 1):
                 pair = (tokens[i], tokens[i + 1])
                 pairs[pair] = pairs.get(pair, 0) + 1
+            # Edge Case; if no pairs exist, stop
             if not pairs:
                 break
 
+            # Find the most frequent pair (tiebreak: lexicographically smallest) 
+                # Note: Greedy Algorithm decision-making
             best_count = max(pairs.values())
-            candidates = sorted(p for p, c in pairs.items() if c == best_count)
+            candidates = sorted(pair for pair, count in pairs.items() if count == best_count)
             best = candidates[0]
 
             merges.append([best[0], best[1]])
 
+            # Merge all non-overlapping occurences from left to right
             new_tokens = list()
             i = 0
+            # Use manual pointer movement since merges may skip tokens
             while i < len(tokens):
+                # If current adjacent pair matches the best pair:
+                    # Merge them into a single token & skip both
                 if i < len(tokens) - 1 and tokens[i] == best[0] and tokens[i + 1] == best[1]:
                     new_tokens.append(best[0] + best[1])
                     i += 2
+                # Otherwise keep current token & move normally
                 else:
                     new_tokens.append(tokens[i])
                     i += 1
