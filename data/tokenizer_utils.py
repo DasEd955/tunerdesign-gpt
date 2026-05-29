@@ -23,12 +23,12 @@ class Solution:
                 if substr in vocab:
                     best = substr
                     break
-                if best is None:
-                    tokens.append(text[i])
-                    i += 1
-                else:
-                    tokens.append(best)
-                    i += len(best)
+            if best is None:
+                tokens.append(text[i])
+                i += 1
+            else:
+                tokens.append(best)
+                i += len(best)
         return tokens
 
     def count_tokens(self, text: str, vocab: Dict[str, int]) -> int:
