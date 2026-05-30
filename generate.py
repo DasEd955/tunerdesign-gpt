@@ -14,16 +14,20 @@ class Solution:
         initial_state = generator.get_state()
         result = list()
         for i in range(new_chars):
+            # Crop context to max length the model can handle
             if context.shape[1] > context_length:
                 context = context[:, -context_length:]
             
-            logits = model(context)
-            last_logits = logits[:, -1, :]
+            # Forward Pass -> logits for every position
+            logits = model(context)             # (1, T, vocab_size)
+            last_logits = logits[:, -1, :]      # (1, vocab_size)
             probs = nn.functional.softmax(last_logits, dim=-1)
 
+            # Sample next token & reset RNG for reproducibility
             next_token = torch.multinomial(probs, 1, generator=generator)
             generator.set_state(initial_state)
 
+            # Append token to context & decode
             context = torch.cat((context, next_token), dim=-1)
             result.append(int_to_char[next_token.item()])
         
