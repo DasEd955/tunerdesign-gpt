@@ -8,8 +8,14 @@ import torch.nn.functional as F
 class Solution:
     def train(self, model: nn.Module, data: torch.Tensor, epochs: int, context_length: int, batch_size: int, lr: float) -> float:
         # Train the GPT model using AdamW and cross_entropy loss.
-        # For each epoch: seed with torch.manual_seed(epoch),
-        # sample batches from data, run forward/backward, update weights.
+        # For each epoch: seed with torch.manual_seed(epoch).
+        # Sample a batch: randomly select starting position in the training data & extract input-target pairs
+        # Forward pass: feed input tokens through the model; output shape is (B, T, C)
+            # B -> batch size, T -> Context Length, C -> vocab size
+        # Compute loss: Reshape logits to (B * T, V) & targets to (B * T), then apply cross-entropy
+            # This treats each position as an independent classification problem
+        # Backward pass: loss.backward() computes gradients for every parameter
+        # Update: optimizer.step() applies AdamW updates
         # Return the final loss rounded to 4 decimals.
         optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
