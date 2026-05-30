@@ -7,6 +7,7 @@ class Solution:
         # 2. Generate batch_size random start indices using torch.randint()
         #    Range: [0, len(tokens) - context_length)
         # 3. For each index i, X = tokens[i:i+context_length], Y = tokens[i+1:i+1+context_length]
+        # X -> Input; Y -> Target
         torch.manual_seed(0)
         data = raw_dataset.split()
         indices = torch.randint(low=0, high=len(data) - context_length, size=(batch_size,)).tolist()
