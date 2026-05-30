@@ -9,6 +9,7 @@ class Solution:
         # 3. Sample next token with torch.multinomial(probs, 1, generator=generator)
         # 4. Append sampled token to context with torch.cat
         # 5. Map token to character using int_to_char and accumulate result
+        # 6. Repeat for desired number of new characters
         generator = torch.manual_seed(0)
         initial_state = generator.get_state()
         result = list()
