@@ -197,7 +197,7 @@ flowchart TD
         LN1 --> MHA --> ADD1
     end
 
-    subgraph SUBLAYER2["Sublayer 2 — Feed-Forward Network (Pre-LN residual)"]
+    subgraph SUBLAYER2["Sublayer 2 — FeedForward Network (Pre-LN residual)"]
         direction TB
         LN2["LayerNorm\nNormalize again before the feed forward\nnetwork so signal stays well-scaled\nnormalization.py"]
         FF1["Linear expand: 128 → 512\nProject up to a wider space so the\nnetwork can express richer combinations"]
