@@ -21,8 +21,9 @@ autoregressive inference, and an AdamW training loop.
 6. [Training](#6-training)
 7. [Inference](#7-inference)
 8. [Spec Reflection](#8-spec-reflection)
-9. [Limitations](#9-limitations)
-10. [Setup and Launch](#10-setup-and-launch)
+9. [Test Suite](#9-test-suite)
+10. [Limitations](#10-limitations)
+11. [Setup and Launch](#11-setup-and-launch)
 
 ---
 
@@ -538,7 +539,62 @@ reshape the input tensor to process all heads in a single GEMM call.
 
 ---
 
-## 9. Limitations
+## 9. Test Suite
+
+The `tests/` directory contains a pytest-based test suite covering every major module and
+stage in building up the GPT. Tests are organized by layer of abstraction, matching the
+sequential construction order of the repository.
+
+---
+
+### Running the tests
+
+```bash
+pip install -r requirements.txt
+pytest tests/
+```
+
+To run a single file:
+
+```bash
+pytest tests/test_vocab.py
+```
+
+To run with verbose output:
+
+```bash
+pytest tests/ -v
+```
+
+---
+
+### Test files
+
+| File | Modules covered | What is tested |
+|---|---|---|
+| `test_vocab.py` | `data/vocab.py` | Vocab construction, alphabetical ordering, encode/decode round-trip |
+| `test_tokenizer.py` | `data/tokenizer.py` | BPE merge selection, lexicographic tiebreaking, non-overlapping merges, early stopping |
+| `test_tokenizer_utils.py` | `data/tokenizer_utils.py` | Greedy longest match tokenization, number tokenization, token count, fertility score |
+| `test_data_loaders.py` | `data/loader.py`, `data/dataset.py`, `data/nlp_preprocessing.py` | Batch shapes, Y is X shifted-by-one, reproducibility, padding, ID assignment |
+| `test_normalization.py` | `model/normalization.py`, `model/rms_normalization.py`, `model/batch_normalization.py` | Zero mean, unit variance, gamma/beta scaling, training vs inference mode, rounding |
+| `test_embeddings_and_encoding.py` | `model/embeddings.py`, `model/positional_encoding.py` | Row retrieval, sine/cosine formula correctness, boundary positions, odd d_model |
+| `test_attention.py` | `model/attention.py`, `model/multi_head_attention.py`, `model/grouped_query_attention.py` | Output shapes, causal masking, head count, KV head repetition, rounding |
+| `test_transformer.py` | `model/transformer.py` | Output shape, residual connections, FFN dimension ratios, sublayer presence |
+| `test_gpt.py` | `model/gpt.py`, `model/model.py` | Forward pass shape, raw logits, GPTConfig defaults, save/load checkpoint integrity |
+| `test_kv_cache.py` | `model/kv_cache.py` | Cache initialization, incremental concatenation, clear/reset, CachedAttention output |
+| `test_train_and_generate.py` | `train.py`, `generate.py` | Loss type and rounding, loss decreases, weight updates, output length, vocab coverage, determinism |
+| `test_integration.py` | Full pipeline | Data-to-training, training-to-generation, checkpoint round trip, `run()` entry point, reproducibility |
+
+---
+
+### Coverage summary
+
+- **Unit tests** verify each module in isolation with controlled inputs and exact output contracts (shapes, rounding precision, numerical formulas).
+- **Integration tests** verify that modules compose correctly: the data pipeline feeds the training loop, trained models generate valid characters, saved checkpoints reload identically, and `run()` completes the full pipeline end to end.
+
+---
+
+## 10. Limitations
 
 The model implemented here is architecturally complete. Given adequate training data and
 compute, it would learn to generate coherent text. Under the current conditions, it does
@@ -576,7 +632,7 @@ is the data and the compute.
 
 ---
 
-## 10. Setup and Launch
+## 11. Setup and Launch
 
 **Prerequisites**
 
