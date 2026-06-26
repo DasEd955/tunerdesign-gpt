@@ -191,7 +191,7 @@ flowchart TD
 
     subgraph SUBLAYER1["Sublayer 1 — Self-Attention (Pre-LN residual)"]
         direction TB
-        LN1["LayerNorm\nNormalise each token vector to zero mean,\nunit variance before attention sees it\nnormalization.py"]
+        LN1["LayerNorm\nNormalize each token vector to zero mean,\nunit variance before attention sees it\nnormalization.py"]
         MHA["Multi-Head Attention\n4 independent heads, each 32-dim\nEach head learns different relationships\nbetween tokens in the sequence\nmulti_head_attention.py · attention.py"]
         ADD1(["Residual add +\nAdd original input back to attention output\nso the block only needs to learn the\n'correction', not reconstruct the signal"])
         LN1 --> MHA --> ADD1
@@ -199,12 +199,12 @@ flowchart TD
 
     subgraph SUBLAYER2["Sublayer 2 — Feed-Forward Network (Pre-LN residual)"]
         direction TB
-        LN2["LayerNorm\nNormalise again before the feed-forward\nnetwork so signal stays well-scaled\nnormalization.py"]
+        LN2["LayerNorm\nNormalize again before the feed forward\nnetwork so signal stays well-scaled\nnormalization.py"]
         FF1["Linear expand: 128 → 512\nProject up to a wider space so the\nnetwork can express richer combinations"]
-        ACT["ReLU activation\nZero out negatives — introduces\nnon-linearity so the model isn't\njust doing linear algebra\nactivations.py"]
+        ACT["ReLU activation\nZero out negatives — introduces\nnonlinearity so the model isn't\njust doing linear algebra\nactivations.py"]
         FF2["Linear compress: 512 → 128\nProject back down to the original\nmodel width so the next block\nreceives the same shape"]
-        DROP["Dropout (p=0.2)\nRandomly zero 20 % of values during\ntraining to prevent over-fitting"]
-        ADD2(["Residual add +\nAdd the feed-forward output back to\nthe post-attention signal"])
+        DROP["Dropout (p=0.2)\nRandomly zero 20% of values during\ntraining to prevent overfitting"]
+        ADD2(["Residual add +\nAdd the feedforward output back to\nthe post-attention signal"])
         LN2 --> FF1 --> ACT --> FF2 --> DROP --> ADD2
     end
 
