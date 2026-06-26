@@ -129,6 +129,60 @@ foundations/    Neural network primitives built from scratch
 
 ![GPT Architecture](architecture.png)
 
+```mermaid
+flowchart TD
+    RAW["Raw text corpus"]
+
+    subgraph DATA["Data pipeline (data/)"]
+        direction LR
+        TOK["Tokenizer\nBPE + char vocab\ntokenizer.py · vocab.py · tokenizer_utils.py"]
+        PRE["Preprocessor\nNLP cleaning\nnlp_preprocessing.py"]
+        DS["Dataset\nGPT prep\ndataset.py"]
+        LDR["Loader\nBatched training\nloader.py"]
+        TOK --> PRE --> DS --> LDR
+    end
+
+    subgraph FOUND["Neural network foundations (foundations/)"]
+        direction LR
+        NB["Neuron + backprop\nneuron.py · backprop.py · multi_layer_backprop.py"]
+        MA["MLP + activations\nmlp.py · activations.py · softmax.py"]
+        LF["Loss functions\nloss.py · linear_regression.py"]
+        TL["Training loop\ntraining_loop.py · gradient_descent.py · weight_init.py"]
+        DR["Dead ReLU detect\ndead_relu_detector.py · training_diagnostics.py"]
+        NB ~~~ MA ~~~ LF ~~~ TL ~~~ DR
+    end
+
+    subgraph MODEL["GPT model architecture (model/)"]
+        direction TB
+        EMB["Embeddings\nWord + positional\nembeddings.py · positional_encoding.py"]
+        ATT["Attention\nSelf + multi-head\nattention.py · multi_head_attention.py"]
+        NORM["Normalization\nLayer / RMS / batch\nnormalization.py · rms_normalization.py · batch_normalization.py"]
+        TB["Transformer block\nAttn + FFN + norm\ntransformer.py"]
+        GPT["GPT model\nStacked transformer\ngpt.py"]
+        KV["KV-cache\nFast inference\nkv_cache.py"]
+        GQA["Grouped query attn\nEfficient multi-head\ngrouped_query_attention.py"]
+        ENTRY["model.py\nGPTConfig · create_model\nsave_model · load_model · run"]
+        EMB --> ATT --> NORM --> TB --> GPT
+        KV --> GPT
+        GQA --> GPT
+        GPT --> ENTRY
+    end
+
+    TRAIN["train.py\nGPT training loop\nAdamW + cross-entropy"]
+    GEN["generate.py\nText generation\nAutoregressive decoding"]
+    CKPT["saved_model/\nCheckpoint · gpt.pt"]
+    OUT["Generated text output"]
+
+    RAW --> DATA
+    DATA --> FOUND
+    FOUND --> MODEL
+    ENTRY --> TRAIN
+    TRAIN --> ENTRY
+    ENTRY --> GEN
+    ENTRY --> CKPT
+    GEN --> OUT
+```
+
 ### Transformer Block
 
 ```mermaid
@@ -170,7 +224,7 @@ flowchart TD
     M --> N["Attention Output\n(batch, seq_len, model_dim)"]
 ```
 
-The input is linearly projected into three separate tensors: queries (Q), keys (K), and values (V), each of shape `(batch, seq_len, head_dim)`. Attention scores are computed as the dot product of Q and K transposed, scaled by `1 / sqrt(head_dim)` to prevent the softmax from saturating in high-dimensional spaces. A causal lower-triangular mask then sets all positions above the diagonal to negative infinity, which forces the softmax to assign zero probability to future tokens and makes this decoder-style attention suitable for language modeling. The resulting attention weights are applied to V via a weighted sum to produce each head's output. In multi-head attention, this full computation runs in parallel across all 4 heads independently, their outputs are concatenated along the feature dimension to restore model width, and a final learned projection W_O mixes information across heads before the result is passed to the transformer block's residual connection.
+The input is linearly projected into three separate tensors: queries (Q), keys (K), and values (V), each of shape `(batch, seq_len, head_dim)`. Attention scores are computed as the dot product of Q and K transposed, scaled by `1 / sqrt(head_dim)` to prevent the softmax from saturating in high-dimensional spaces. A causal lower triangular mask then sets all positions above the diagonal to negative infinity, which forces the softmax to assign zero probability to future tokens and makes this decoder-style attention suitable for language modeling. The resulting attention weights are applied to V via a weighted sum to produce each head's output. In multi-head attention, this full computation runs in parallel across all 4 heads independently, their outputs are concatenated along the feature dimension to restore model width, and a final learned projection W_O mixes information across heads before the result is passed to the transformer block's residual connection.
 
 ### Autoregressive Generation Pipeline
 
