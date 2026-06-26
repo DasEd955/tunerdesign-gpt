@@ -1,3 +1,10 @@
+"""batch_normalization.py - Batch Normalization forward pass for training and inference.
+
+Implements the standard Batch Normalization algorithm: normalizes each feature
+across the batch using either batch statistics (training mode) or running statistics
+(inference mode), then applies a learned affine transform (gamma, beta).
+"""
+
 import numpy as np
 from typing import Tuple, List
 
@@ -6,6 +13,27 @@ class Solution:
     def batch_norm(self, x: List[List[float]], gamma: List[float], beta: List[float],
                    running_mean: List[float], running_var: List[float],
                    momentum: float, eps: float, training: bool) -> Tuple[List[List[float]], List[float], List[float]]:
+        """Apply batch normalization to a 2D input matrix.
+
+        Training mode: normalizes using per-feature batch mean and variance, then
+        updates the running statistics via exponential moving average.
+        Inference mode: normalizes using the stored running statistics (no batch stats).
+        Both modes apply the affine transform y = gamma * x_hat + beta.
+
+        Args:
+            x: 2D input of shape (batch_size, num_features).
+            gamma: Per-feature scale parameter (1D, length num_features).
+            beta: Per-feature shift parameter (1D, length num_features).
+            running_mean: Exponential moving average of feature means (updated in-place during training).
+            running_var: Exponential moving average of feature variances (updated in-place during training).
+            momentum: Weight for the new batch statistics when updating running stats.
+            eps: Small constant added to the variance for numerical stability.
+            training: If True, use batch statistics and update running stats; if False, use running stats.
+
+        Returns:
+            Tuple of (normalized output as 2D list, updated running_mean as 1D list,
+            updated running_var as 1D list), all rounded to 4 decimal places.
+        """
         # During training: normalize using batch statistics, then update running stats
         # During inference: normalize using running stats (no batch stats needed)
         # Apply affine transform: y = gamma * x_hat + beta

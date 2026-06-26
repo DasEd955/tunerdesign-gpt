@@ -1,3 +1,11 @@
+"""training_diagnostics.py - Activation and gradient statistics for neural network health checks.
+
+Provides tools for diagnosing common training pathologies by inspecting what
+actually flows through the network during the forward and backward passes.
+Detects dead neurons, exploding/vanishing gradients, and activation collapse
+without requiring the user to instrument the model manually.
+"""
+
 import torch
 import torch.nn as nn
 from typing import List, Dict
@@ -6,6 +14,23 @@ from typing import List, Dict
 class Solution:
 
     def compute_activation_stats(self, model: nn.Module, x: torch.Tensor) -> List[Dict[str, float]]:
+        """Collect activation statistics after each Linear layer in the model.
+
+        Runs a forward pass layer by layer (torch.no_grad()) and records mean,
+        std, and dead_fraction after each nn.Linear. Checks the outputs of each
+        Linear layer during the forward pass.
+
+        A neuron is counted as dead if its activation is <= 0 for all samples
+        in the batch (checking across dim=0 for 2D activations).
+
+        Args:
+            model: Neural network to inspect.
+            x: Input batch tensor.
+
+        Returns:
+            List[Dict[str, float]]: One dict per nn.Linear layer with keys
+            'mean', 'std', and 'dead_fraction', all rounded to 4 decimal places.
+        """
         # Forward pass through model layer by layer
         # After each nn.Linear, record: mean, std, dead_fraction
         # Run with torch.no_grad(). Round to 4 decimals.
@@ -43,6 +68,22 @@ class Solution:
         return stats 
 
     def compute_gradient_stats(self, model: nn.Module, x: torch.Tensor, y: torch.Tensor) -> List[Dict[str, float]]:
+        """Collect weight gradient statistics for each Linear layer after a backward pass.
+
+        Zeroes gradients, runs a forward pass with nn.MSELoss, calls loss.backward(),
+        and then records mean, std, and L2 norm of the weight gradient for each
+        nn.Linear. Checks whether gradients are too small, too large, or healthy
+        during backpropagation.
+
+        Args:
+            model: Neural network to inspect.
+            x: Input batch tensor.
+            y: Target tensor used with nn.MSELoss.
+
+        Returns:
+            List[Dict[str, float]]: One dict per nn.Linear layer with keys
+            'mean', 'std', and 'norm', all rounded to 4 decimal places.
+        """
         # Forward + backward pass with nn.MSELoss
         # For each nn.Linear layer's weight gradient, record: mean, std, norm
         # Call model.zero_grad() first. Round to 4 decimals.
@@ -77,6 +118,24 @@ class Solution:
         return stats
 
     def diagnose(self, activation_stats: List[Dict[str, float]], gradient_stats: List[Dict[str, float]]) -> str:
+        """Classify network training health from activation and gradient statistics.
+
+        Converts stats into a label. Checks in priority order:
+            1. 'dead_neurons' if any layer's dead_fraction > 0.5
+            2. 'exploding_gradients' if any gradient norm > 1000
+            3. 'vanishing_gradients' if the last layer's gradient norm < 1e-5,
+               or if any activation std < 0.1
+            4. 'exploding_gradients' if any activation std > 10.0
+            5. 'healthy' otherwise
+
+        Args:
+            activation_stats: Output of compute_activation_stats().
+            gradient_stats: Output of compute_gradient_stats().
+
+        Returns:
+            str: One of 'dead_neurons', 'exploding_gradients',
+            'vanishing_gradients', or 'healthy'.
+        """
         # Classify network health based on the stats
         # Return: 'dead_neurons', 'exploding_gradients', 'vanishing_gradients', or 'healthy'
         # Check in priority order (see problem description for thresholds)

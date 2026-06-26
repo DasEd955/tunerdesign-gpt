@@ -1,8 +1,33 @@
+"""tokenizer.py - Byte-Pair Encoding (BPE) merge learning algorithm.
+
+Implements the BPE tokenizer training procedure: starting from a character-level
+split, repeatedly merges the most frequent adjacent token pair (breaking ties
+lexicographically) until num_merges merges have been performed or no pairs remain.
+"""
+
 from typing import List
 
 
 class Solution:
     def get_merges(self, corpus: str, num_merges: int) -> List[List[str]]:
+        """Learn BPE merges from a corpus string.
+
+        Splits the corpus into individual characters, then for each merge step:
+            a. Counts the frequency of every adjacent token pair.
+            b. Selects the most frequent pair, breaking ties lexicographically.
+            c. Merges all non-overlapping occurrences left to right.
+            d. Records the merge as [token_a, token_b].
+
+        Stops early if fewer than 2 tokens remain or no adjacent pairs exist.
+
+        Args:
+            corpus: The raw training text to learn merges from.
+            num_merges: Maximum number of merge operations to perform.
+
+        Returns:
+            List[List[str]]: Ordered list of merges, each entry being
+            [token_a, token_b] representing one merge step.
+        """
         # 1. Split corpus into a list of individual characters
         # 2. For each merge step:
         #    a. Count frequency of all adjacent token pairs

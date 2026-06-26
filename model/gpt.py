@@ -1,12 +1,39 @@
+"""gpt.py - Full character-level GPT model: embeddings, transformer blocks, and vocab projection.
+
+Assembles the complete decoder-only GPT architecture: learned word and position
+embeddings are summed, passed through a stack of Pre-LN transformer blocks, normalized
+with a final LayerNorm, and projected to raw vocabulary logits (no softmax).
+"""
+
 import torch
 import torch.nn as nn
 from torchtyping import TensorType
 
+
 # 1. Remember to include an additional LayerNorm after the block sequence and before the final linear layer
 # 2. Instantiate in the following order: Word embeddings, position embeddings, transformer blocks, final layer norm, and vocabulary projection.
 class GPT(nn.Module):
+    """Decoder-only GPT language model.
+
+    Architecture:
+        word_embeddings + position_embeddings -> TransformerBlock x num_blocks
+        -> LayerNorm -> Linear(model_dim, vocab_size) -> raw logits
+    """
 
     def __init__(self, vocab_size: int, context_length: int, model_dim: int, num_blocks: int, num_heads: int):
+        """Instantiate all layers in a fixed order for reproducible weights.
+
+        Instantiation order: word embeddings, position embeddings, transformer blocks
+        (via nn.Sequential), final LayerNorm, vocabulary projection.
+
+        Args:
+            vocab_size: Number of unique tokens; determines embedding table rows and
+                output projection size.
+            context_length: Maximum sequence length; determines position embedding rows.
+            model_dim: Embedding and hidden dimension used throughout the network.
+            num_blocks: Number of stacked TransformerBlocks.
+            num_heads: Number of attention heads per block (must evenly divide model_dim).
+        """
         super().__init__()
         torch.manual_seed(0)
         # Hint: nn.Sequential() will be useful for the block sequence
@@ -19,6 +46,19 @@ class GPT(nn.Module):
         self.vocab_projection = nn.Linear(model_dim, vocab_size)
 
     def forward(self, context: TensorType[int]) -> TensorType[float]:
+        """Compute next-token logits for every position in the input sequence.
+
+        Sums token and position embeddings, passes through transformer blocks,
+        applies the final LayerNorm, and projects to vocab_size. Returns raw
+        logits (no softmax) rounded to 4 decimal places.
+
+        Args:
+            context: Integer token ID tensor of shape (batch, seq_len).
+
+        Returns:
+            TensorType[float]: Logit tensor of shape (batch, seq_len, vocab_size),
+            rounded to 4 decimal places.
+        """
         # 1. Add token embeddings + position embeddings (use torch.arange for positions)
         # 2. Pass through transformer blocks
         # 3. Apply final LayerNorm, then project to vocab_size

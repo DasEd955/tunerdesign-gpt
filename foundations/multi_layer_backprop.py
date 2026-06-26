@@ -1,3 +1,10 @@
+"""multi_layer_backprop.py - Two layer MLP forward and backward pass.
+
+Implements manual backpropagation through a two layer ReLU network using NumPy.
+Returns both the MSE loss and the weight/bias gradients for both layers,
+demonstrating the chain rule applied to a concrete two layer architecture.
+"""
+
 import numpy as np
 from typing import List
 
@@ -8,6 +15,26 @@ class Solution:
                               W1: List[List[float]], b1: List[float],
                               W2: List[List[float]], b2: List[float],
                               y_true: List[float]) -> dict:
+        """Compute the forward pass, MSE loss, and all gradients for a two layer MLP.
+
+        Architecture: x -> Linear(W1, b1) -> ReLU -> Linear(W2, b2) -> predictions
+        Loss: MSE = mean((predictions - y_true)^2)
+
+        Runs the forward pass to obtain predictions, then propagates gradients
+        backward through both linear layers and the ReLU nonlinearity via chain rule.
+
+        Args:
+            x: 1D input vector.
+            W1: 2D weight matrix for the first layer.
+            b1: 1D bias vector for the first layer.
+            W2: 2D weight matrix for the second layer.
+            b2: 1D bias vector for the second layer.
+            y_true: True target values.
+
+        Returns:
+            dict: Keys 'loss' (float), 'dW1' (2D list), 'db1' (1D list),
+            'dW2' (2D list), 'db2' (1D list), all rounded to 4 decimal places.
+        """
         # Architecture: x -> Linear(W1, b1) -> ReLU -> Linear(W2, b2) -> predictions
         # Loss: MSE = mean((predictions - y_true)^2)
         #

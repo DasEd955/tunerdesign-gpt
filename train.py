@@ -1,12 +1,34 @@
+"""train.py - AdamW training loop for the character-level GPT model.
+
+The GPT model is provided externally and returns raw logits (not probabilities).
+This module implements only the gradient update loop used to fit the model.
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# The GPT model is provided for you. It returns raw logits (not probabilities).
-# You only need to implement the training loop below.
 
 class Solution:
     def train(self, model: nn.Module, data: torch.Tensor, epochs: int, context_length: int, batch_size: int, lr: float) -> float:
+        """Train the GPT model using AdamW and cross-entropy loss.
+
+        For each epoch: seeds with torch.manual_seed(epoch), samples a random batch of
+        (input, target) pairs by selecting batch_size starting positions from data, runs a
+        forward pass to get logits of shape (B, T, C), reshapes to (B*T, V) and (B*T,) for
+        cross-entropy, then runs the backward pass and an AdamW parameter update.
+
+        Args:
+            model: GPT model that returns logits with shape (batch, context, vocab).
+            data: 1D tensor of integer token IDs representing the full training corpus.
+            epochs: Number of gradient update iterations to perform.
+            context_length: Number of tokens in each input/target sequence (T).
+            batch_size: Number of sequences sampled per gradient step (B).
+            lr: Learning rate for the AdamW optimizer.
+
+        Returns:
+            float: The final training loss rounded to 4 decimal places.
+        """
         # Train the GPT model using AdamW and cross_entropy loss.
         # For each epoch: seed with torch.manual_seed(epoch).
         # Sample a batch: randomly select starting position in the training data & extract input-target pairs

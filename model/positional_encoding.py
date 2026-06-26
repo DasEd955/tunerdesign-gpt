@@ -1,9 +1,34 @@
+"""positional_encoding.py - Sinusoidal positional encoding from "Attention Is All You Need".
+
+Computes a (seq_len, d_model) matrix where even columns are sine and odd columns are
+cosine of position scaled frequencies. No loops are used; broadcasting handles the
+full matrix at once.
+"""
+
 import numpy as np
 from numpy.typing import NDArray
 
 
 class Solution:
     def get_positional_encoding(self, seq_len: int, d_model: int) -> NDArray[np.float64]:
+        """Compute sinusoidal positional encodings for a sequence.
+
+        Fills a (seq_len, d_model) matrix using the formulas:
+            PE(pos, 2i)   = sin(pos / 10000^(2i / d_model))
+            PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
+
+        Uses np.arange() and broadcasting to compute all values at once without
+        any explicit loops. Even columns (0::2) receive sine values; odd columns
+        (1::2) receive cosine values.
+
+        Args:
+            seq_len: Number of positions (rows) in the encoding matrix.
+            d_model: Model dimension (columns); determines the frequency range.
+
+        Returns:
+            NDArray[np.float64]: Positional encoding matrix of shape (seq_len, d_model),
+            rounded to 5 decimal places.
+        """
         # PE(pos, 2i)   = sin(pos / 10000^(2i / d_model))
         # PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
         #
