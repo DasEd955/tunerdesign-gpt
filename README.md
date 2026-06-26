@@ -20,6 +20,8 @@ autoregressive inference, and an AdamW training loop.
 5. [Transformer Architecture](#5-transformer-architecture)
 6. [Training](#6-training)
 7. [Inference](#7-inference)
+7a. [Model Module](#7a-model-module)
+7b. [Gradio Demo Interface](#7b-gradio-demo-interface)
 8. [Spec Reflection](#8-spec-reflection)
 9. [Test Suite](#9-test-suite)
 10. [Limitations](#10-limitations)
@@ -113,6 +115,7 @@ data/           Data pipeline
 
 train.py        GPT training loop (used by model/model.py)
 generate.py     Text generation (used by model/model.py)
+app.py          Gradio web UI for interactive inference
 
 saved_model/    Persisted model checkpoints (written by save_model)
 
@@ -124,6 +127,9 @@ foundations/    Neural network primitives built from scratch
 ---
 
 ## 2. Architecture Diagrams
+
+### Repository Architecture 
+_Coming Soon_
 
 ### GPT Architecture
 
@@ -675,6 +681,62 @@ directly executes a self contained demonstration on a short Shakespeare passage.
 
 ---
 
+## 7b. Gradio Demo Interface
+
+### `app.py`
+
+`app.py` exposes the trained model through an interactive, browser-based chat interface
+built with Gradio. Its sole purpose is inference: it loads the saved checkpoint from
+`saved_model/gpt.pt`, reconstructs the character-level vocabulary from the training
+corpus, and serves a `gr.ChatInterface` that accepts user prompts and returns
+autoregressive completions one session at a time.
+
+The interface is modelled after mainstream LLM chat frontends (a centered input box,
+multiturn history, example prompts), but is titled **Tuner Design GPT** and carries
+a permanent disclaimer in the description field:
+
+> This demo showcases inference only. Since the model is intentionally trained on a
+> small dataset for educational purposes (and due to the scale of data it would require,
+> outputs mirror the language of the training corpus but with great brevity, as outlined
+> in the README), outputs are largely nonsensical.
+
+Multiturn conversation history is preserved natively by `gr.ChatInterface` across
+every prompt within the same session, so the UI behaves like a standard chat product
+even though the underlying model has no mechanism to condition on earlier turns
+(each prompt is encoded independently from scratch).
+
+**Key functions in `app.py`:**
+
+| Function | Purpose |
+|---|---|
+| `load_artifacts(path)` | Load checkpoint, restore model in eval mode, rebuild stoi/itos |
+| `encode_prompt(prompt, stoi)` | Convert a user string to a (1, T) token tensor; unknown chars are dropped |
+| `generate_response(model, config, stoi, itos, prompt, new_chars)` | Run autoregressive generation and return the output string |
+| `build_respond_fn(model, config, stoi, itos)` | Return the Gradio compatible respond callable closed over model artifacts |
+| `build_interface(model, config, stoi, itos)` | Assemble and return the configured `gr.ChatInterface` |
+| `main(model_path, share)` | Load artifacts, build interface, and call `interface.launch()` |
+
+**Launching the demo:**
+
+```bash
+python app.py
+```
+
+Gradio will print a local URL (typically `http://127.0.0.1:7860`) to the terminal.
+Open it in any browser to interact with the model. A publicly shareable link can be
+obtained by passing `share=True` from the `main()` call.
+
+**Design notes:**
+
+- Characters in user prompts that fall outside the training vocabulary are silently
+  dropped rather than raising an error, so arbitrary input never crashes the server.
+- If a prompt encodes to nothing (all characters unknown), a single token 0 is used
+  as a fallback seed so the generator always produces output.
+- The model is always forced into `eval()` mode before generation, ensuring dropout
+  layers are disabled even if the model was instantiated in training mode elsewhere.
+
+---
+
 ## 8. Spec Reflection
 
 The sequential construction order of this repository, foundations before tokenization
@@ -747,6 +809,7 @@ pytest tests/ -v
 | `test_kv_cache.py` | `model/kv_cache.py` | Cache initialization, incremental concatenation, clear/reset, CachedAttention output |
 | `test_train_and_generate.py` | `train.py`, `generate.py` | Loss type and rounding, loss decreases, weight updates, output length, vocab coverage, determinism |
 | `test_integration.py` | Full pipeline | Data-to-training, training-to-generation, checkpoint round trip, `run()` entry point, reproducibility |
+| `test_app.py` | `app.py` | encode_prompt tensor shape/dtype/fallback, generate_response length/chars/determinism/eval mode, respond closure, ChatInterface title and description, DISCLAIMER content |
 
 ---
 
@@ -840,6 +903,18 @@ python train.py
 python generate.py
 ```
 
+**Launch the Gradio demo**
+
+First train and save a checkpoint (or use an existing `saved_model/gpt.pt`), then:
+
+```bash
+python app.py
+```
+
+Gradio will print a local URL (typically `http://127.0.0.1:7860`). Open it in a browser
+to interact with the model. Type any prompt and press Enter to receive a generated
+continuation. Conversation history is retained within the session.
+
 **Stack**
 
-Python · PyTorch · NumPy
+Python · PyTorch · NumPy · Gradio

@@ -1,6 +1,7 @@
 torch>=2.0.0
 numpy>=1.24.0
 torchtyping>=0.1.4
+gradio>=4.0.0
 
 # Test Suite
 pytest>=7.0.0
