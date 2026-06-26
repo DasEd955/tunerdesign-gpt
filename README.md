@@ -187,18 +187,34 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["Input x\n(batch, seq_len, 128)"] --> B["LayerNorm"]
-    B --> C["Multi-Head Attention\n4 heads x 32-dim each"]
-    C --> D(("+"))
-    A --> D
-    D --> E["LayerNorm"]
-    E --> F["Linear: 128 -> 512"]
-    F --> G["ReLU"]
-    G --> H["Linear: 512 -> 128"]
-    H --> I["Dropout (p=0.2)"]
-    I --> J(("+"))
-    D --> J
-    J --> K["Output\n(batch, seq_len, 128)"]
+    IN["Input tensor x\nShape: (batch, seq_len, 128)\nOne vector per token, 128 numbers wide\ntransformer.py"]
+
+    subgraph SUBLAYER1["Sublayer 1 — Self-Attention (Pre-LN residual)"]
+        direction TB
+        LN1["LayerNorm\nNormalise each token vector to zero mean,\nunit variance before attention sees it\nnormalization.py"]
+        MHA["Multi-Head Attention\n4 independent heads, each 32-dim\nEach head learns different relationships\nbetween tokens in the sequence\nmulti_head_attention.py · attention.py"]
+        ADD1(["Residual add +\nAdd original input back to attention output\nso the block only needs to learn the\n'correction', not reconstruct the signal"])
+        LN1 --> MHA --> ADD1
+    end
+
+    subgraph SUBLAYER2["Sublayer 2 — Feed-Forward Network (Pre-LN residual)"]
+        direction TB
+        LN2["LayerNorm\nNormalise again before the feed-forward\nnetwork so signal stays well-scaled\nnormalization.py"]
+        FF1["Linear expand: 128 → 512\nProject up to a wider space so the\nnetwork can express richer combinations"]
+        ACT["ReLU activation\nZero out negatives — introduces\nnon-linearity so the model isn't\njust doing linear algebra\nactivations.py"]
+        FF2["Linear compress: 512 → 128\nProject back down to the original\nmodel width so the next block\nreceives the same shape"]
+        DROP["Dropout (p=0.2)\nRandomly zero 20 % of values during\ntraining to prevent over-fitting"]
+        ADD2(["Residual add +\nAdd the feed-forward output back to\nthe post-attention signal"])
+        LN2 --> FF1 --> ACT --> FF2 --> DROP --> ADD2
+    end
+
+    OUT["Block output\nShape: (batch, seq_len, 128)\nSame shape as input — N blocks\ncan be stacked cleanly\ngpt.py"]
+
+    IN --> SUBLAYER1
+    IN --> ADD1
+    ADD1 --> SUBLAYER2
+    ADD1 --> ADD2
+    ADD2 --> OUT
 ```
 
 Each transformer block applies two sublayers in sequence, each wrapped in a Pre-LN residual connection. The input first passes through LayerNorm and into multi-head self-attention, which runs 4 independent 32-dimensional heads in parallel before projecting their concatenated output back to 128 dimensions. The attention output is added back to the original input via a skip connection. That sum then goes through a second LayerNorm and into a position-wise feed forward network that projects up to 512 dimensions, applies ReLU, projects back down to 128, and applies dropout at rate 0.2 before a second skip connection produces the block output. Placing normalization before rather than after each sublayer (Pre-LN) keeps gradient magnitude stable as the signal passes through many stacked blocks.
@@ -207,21 +223,39 @@ Each transformer block applies two sublayers in sequence, each wrapped in a Pre-
 
 ```mermaid
 flowchart TD
-    A["Input x\n(batch, seq_len, model_dim)"] --> B["W_Q projection"]
-    A --> C["W_K projection"]
-    A --> D["W_V projection"]
-    B --> E["Q\n(batch, seq_len, head_dim)"]
-    C --> F["K\n(batch, seq_len, head_dim)"]
-    D --> G["V\n(batch, seq_len, head_dim)"]
-    E --> H["Q @ K^T / sqrt(head_dim)\n(batch, seq_len, seq_len)"]
-    F --> H
-    H --> I["Causal Mask\n(lower triangular, -inf above diagonal)"]
-    I --> J["Softmax (dim=-1)\nAttention Weights"]
-    J --> K["Weights @ V\n(batch, seq_len, head_dim)"]
-    G --> K
-    K --> L["[head_0 || head_1 || ... || head_n]\n(batch, seq_len, model_dim)"]
-    L --> M["Output Projection W_O\n(model_dim x model_dim)"]
-    M --> N["Attention Output\n(batch, seq_len, model_dim)"]
+    IN["Input x\nShape: (batch, seq_len, model_dim)\nEvery token in the sequence arrives\nas a vector of model_dim numbers\nattention.py · multi_head_attention.py"]
+
+    subgraph QKV["Step 1 — Project into Q, K, V (three separate learned linear layers)"]
+        direction LR
+        WQ["W_Q  ·  Linear projection\nQuery: 'What am I looking for?'\nShape: (batch, seq_len, head_dim)"]
+        WK["W_K  ·  Linear projection\nKey: 'What do I advertise about myself?'\nShape: (batch, seq_len, head_dim)"]
+        WV["W_V  ·  Linear projection\nValue: 'What do I actually share if selected?'\nShape: (batch, seq_len, head_dim)"]
+    end
+
+    SCORES["Step 2 — Compute raw attention scores\nQ @ Kᵀ  ÷  √head_dim\nDot product of every query with every key.\nDivide by √head_dim to stop scores from\ngrowing too large and collapsing the softmax.\nResult shape: (batch, seq_len, seq_len)"]
+
+    MASK["Step 3 — Apply causal mask\nSet every position above the diagonal to −∞\nThis forces the model to look only at\npast tokens, not future ones — essential\nfor language modelling where future words\nare unknown at prediction time"]
+
+    SOFT["Step 4 — Softmax → Attention weights\nConvert masked scores to probabilities (0–1)\nthat sum to 1 across the sequence.\nHigh weight = 'pay a lot of attention to that token'"]
+
+    WSUM["Step 5 — Weighted sum of Values\nWeights @ V\nEach token's output is a blend of all Value\nvectors, weighted by how relevant each\nposition was. Shape: (batch, seq_len, head_dim)"]
+
+    CONCAT["Step 6 — Concatenate all heads\n[head_0 ‖ head_1 ‖ … ‖ head_n]\nAll 4 heads ran the above in parallel,\neach attending to different patterns.\nConcatenate to restore model width.\nShape: (batch, seq_len, model_dim)"]
+
+    WO["Step 7 — Output projection W_O\nOne final linear layer that mixes information\nacross heads so the result is a coherent\nblended representation, not 4 independent ones.\nmulti_head_attention.py"]
+
+    OUT["Attention output\nShape: (batch, seq_len, model_dim)\nPassed to the residual add in the\ntransformer block"]
+
+    IN --> QKV
+    WQ --> SCORES
+    WK --> SCORES
+    SCORES --> MASK
+    MASK --> SOFT
+    SOFT --> WSUM
+    WV --> WSUM
+    WSUM --> CONCAT
+    CONCAT --> WO
+    WO --> OUT
 ```
 
 The input is linearly projected into three separate tensors: queries (Q), keys (K), and values (V), each of shape `(batch, seq_len, head_dim)`. Attention scores are computed as the dot product of Q and K transposed, scaled by `1 / sqrt(head_dim)` to prevent the softmax from saturating in high-dimensional spaces. A causal lower triangular mask then sets all positions above the diagonal to negative infinity, which forces the softmax to assign zero probability to future tokens and makes this decoder-style attention suitable for language modeling. The resulting attention weights are applied to V via a weighted sum to produce each head's output. In multi-head attention, this full computation runs in parallel across all 4 heads independently, their outputs are concatenated along the feature dimension to restore model width, and a final learned projection W_O mixes information across heads before the result is passed to the transformer block's residual connection.
@@ -230,21 +264,44 @@ The input is linearly projected into three separate tensors: queries (Q), keys (
 
 ```mermaid
 flowchart TD
-    A["Initial Context\n(1, context_length)"] --> B{"context_len > max?"}
-    B -- Yes --> C["Crop: keep last context_length tokens"]
-    B -- No --> D["GPT Forward Pass\nlogits: (1, seq_len, vocab_size)"]
-    C --> D
-    D --> E["Slice final position\nlast_logits: (1, vocab_size)"]
-    E --> F["Softmax\nprobs: (1, vocab_size)"]
-    F --> G["torch.multinomial\n(seeded generator)"]
-    G --> H["next_token: int"]
-    H --> I["Append to context\ncontext: (1, seq_len + 1)"]
-    H --> J["Decode: int_to_char lookup"]
-    J --> K["Append char to output string"]
-    I --> L{"generated < new_chars?"}
-    K --> L
-    L -- Yes --> B
-    L -- No --> M["Return generated text"]
+    START["Initial context\nThe seed text, encoded as integer token IDs\nShape: (1, context_length)\ngenerate.py · model/model.py"]
+
+    CROP{"Is context longer\nthan max context_length?"}
+
+    CROPYES["Crop to last context_length tokens\nThe model has a fixed memory window —\nif the running text grows past it, we\nslide the window forward and drop the oldest tokens\ngenerate.py"]
+
+    FWD["GPT forward pass\nFeed the full context through all transformer blocks.\nEvery token position produces logits — raw scores,\none per vocabulary character.\nOutput shape: (1, seq_len, vocab_size)\ngpt.py"]
+
+    SLICE["Slice out the final position's logits\nOnly the last token's logits matter:\nthat position has seen all prior tokens\nand predicts what comes next.\nShape: (1, vocab_size)"]
+
+    SOFTMAX["Softmax → probability distribution\nConvert raw logits to probabilities (0 – 1)\nthat sum to 1 across the entire vocabulary.\nHigh probability = model is confident\nabout that character.\nfoundations/softmax.py"]
+
+    SAMPLE["torch.multinomial — sample one token\nDraw one character index at random,\nweighted by the probabilities.\nSeeded generator makes this reproducible.\nResult: a single integer index"]
+
+    DECODE["Decode integer → character\nLook up the integer in int_to_char map\nbuilt by vocab.py to get the actual\ncharacter string"]
+
+    APPEND_STR["Append character to output string\nBuild up the generated text\none character at a time"]
+
+    APPEND_CTX["Append token ID to context tensor\nGrow the context by 1 so the next\nforward pass conditions on everything\ngenerated so far\nShape grows: (1, seq_len + 1)"]
+
+    DONE{"Generated enough characters?\ngenerated_count < new_chars"}
+
+    RETURN["Return generated text string\nThe complete model output\nmodel/model.py → caller"]
+
+    START --> CROP
+    CROP -- Yes --> CROPYES
+    CROP -- No --> FWD
+    CROPYES --> FWD
+    FWD --> SLICE
+    SLICE --> SOFTMAX
+    SOFTMAX --> SAMPLE
+    SAMPLE --> DECODE
+    DECODE --> APPEND_STR
+    SAMPLE --> APPEND_CTX
+    APPEND_STR --> DONE
+    APPEND_CTX --> DONE
+    DONE -- Not yet --> CROP
+    DONE -- Yes --> RETURN
 ```
 
 Generation is a loop that extends the context by one token per step. At the start of each step the running context is cropped to the model's maximum `context_length` if it has grown beyond that limit, ensuring the forward pass always receives a valid input shape. The full context is passed through the GPT, which returns logits of shape `(1, seq_len, vocab_size)`, and only the logits at the final sequence position are retained because that position conditions on all preceding tokens. Softmax converts those logits to a probability distribution over the vocabulary, and `torch.multinomial` draws a single sample from it using a seeded generator for reproducibility. The sampled integer index is decoded back to a character, appended to the output string, and also appended to the context tensor before the next iteration begins. This process repeats for `new_chars` steps, with the context window growing by one token each time and the model paying O(T^2) cost per step unless a KV cache is attached to skip reprocessing prior positions.
