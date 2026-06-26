@@ -1,5 +1,7 @@
 # Tuner Design GPT — GPT from Scratch
 
+![Demo UI](util/Gradio-UI.png)
+
 A ground up implementation of the GPT architecture in Python, built component by
 component from first mathematical principles before a single PyTorch module was
 introduced. Every abstraction in this repository, from scalar gradient descent to

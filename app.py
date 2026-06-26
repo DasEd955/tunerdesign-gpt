@@ -189,8 +189,9 @@ def build_interface(model, config, stoi: dict, itos: dict) -> gr.ChatInterface:
         description=DISCLAIMER,
         chatbot=gr.Chatbot(placeholder="Welcome to Tuner Design GPT"),
         textbox=gr.Textbox(
-            placeholder="Type a prompt and press Enter...",
+            placeholder="Type a prompt and press [Enter] or click [Send]...",
             container=False,
+            submit_btn="Send",
         ),
     )
     return interface
