@@ -1,12 +1,12 @@
 # Tuner Design GPT — GPT from Scratch
 
-A ground-up implementation of the GPT architecture in Python, built component by
+A ground up implementation of the GPT architecture in Python, built component by
 component from first mathematical principles before a single PyTorch module was
 introduced. Every abstraction in this repository, from scalar gradient descent to
 grouped query attention, was written and validated as a standalone unit before being
 composed into the final working language model. The result is a complete, end-to-end
 system that demonstrates the full engineering depth behind modern large language models:
-foundations, tokenization, a production-caliber transformer architecture, KV-cached
+foundations, tokenization, a production caliber transformer architecture, KV-cached
 autoregressive inference, and an AdamW training loop.
 
 ---
@@ -30,32 +30,32 @@ autoregressive inference, and an AdamW training loop.
 
 The repository is organized into four layers of increasing abstraction, each built before
 the layer above it depends on it. At the base is `foundations/`, a collection of
-pure-NumPy and early-PyTorch modules that implement every mathematical primitive a neural
-network needs: gradient descent, backpropagation through a single neuron, multi-layer
+pure NumPy and early PyTorch modules that implement every mathematical primitive a neural
+network needs: gradient descent, backpropagation through a single neuron, multilayer
 backpropagation, activation functions, loss functions, normalization variants, weight
 initialization strategies, and diagnostic utilities for dead neurons and gradient health.
 These modules are not wrappers around library calls; they derive every operation from the
-underlying calculus so that the behavior of the higher-level components can be understood
+underlying calculus so that the behavior of the higher level components can be understood
 mechanically rather than treated as a black box.
 
 Above the foundations sits `data/`, which handles the full pipeline from raw text to
 batched training tensors. A character-level vocabulary builder (`vocab.py`) constructs
 integer-to-character and character-to-integer mappings from any input corpus. A
 byte-pair encoding tokenizer (`tokenizer.py`) implements the greedy merge algorithm used
-by GPT-family models to build subword vocabularies. An NLP preprocessing module
-(`nlp_preprocessing.py`) constructs padded, vocabulary-aligned datasets for sequence
-classification tasks. Utilities in `tokenizer_utils.py` implement greedy longest-match
+by GPT family models to build subword vocabularies. An NLP preprocessing module
+(`nlp_preprocessing.py`) constructs padded, vocabulary aligned datasets for sequence
+classification tasks. Utilities in `tokenizer_utils.py` implement greedy longest match
 tokenization and compute fertility scores for measuring vocabulary efficiency. Finally,
 `loader.py` and `dataset.py` implement the batched data loaders that randomly sample
-`(input, target)` sequence pairs from a flat corpus, creating the shifted-by-one targets
+`(input, target)` sequence pairs from a flat corpus, creating the shifted by one targets
 that autoregressive language model training requires.
 
 The core of the system is `model/`, which implements every major component of the GPT
-architecture. A single attention head (`attention.py`) computes scaled dot-product
+architecture. A single attention head (`attention.py`) computes scaled dot product
 attention with a causal mask. `multi_head_attention.py` runs several heads in parallel and
 projects their concatenated outputs. `transformer.py` composes attention and a
-position-wise feed-forward network inside a Pre-LN residual block, the architectural
-variant used by modern GPT-family models (normalization before each sub-layer rather than
+position wise feed forward network inside a Pre-LN residual block, the architectural
+variant used by modern GPT family models (normalization before each sublayer rather than
 after, which stabilizes training). `gpt.py` stacks N of those blocks with learned token
 and position embeddings and a final linear projection to vocabulary logits. Three
 normalization variants are provided: layer normalization (`normalization.py`), RMS
@@ -66,7 +66,7 @@ is All You Need" paper. The embedding lookup (`embeddings.py`) demonstrates inde
 retrieval from the weight matrix. For efficient inference, `kv_cache.py` implements a
 stateful KV cache that appends newly projected keys and values to a running buffer rather
 than recomputing the full sequence at each decoding step. `grouped_query_attention.py`
-implements the memory-efficient attention variant used in Llama 2 and Mistral, where
+implements the memory efficient attention variant used in Llama 2 and Mistral, where
 multiple query heads share a smaller number of key/value heads, reducing the KV cache
 footprint proportionally.
 
@@ -74,7 +74,7 @@ footprint proportionally.
 the GPT model using AdamW optimization and cross-entropy loss, treating every position in
 the sequence as an independent next-token classification problem. `generate.py` implements
 autoregressive decoding: at each step the model receives the current context, produces a
-probability distribution over the vocabulary by applying softmax to the final-position
+probability distribution over the vocabulary by applying softmax to the final position
 logits, samples the next token using multinomial sampling, appends it to the context, and
 repeats for however many characters are requested.
 
@@ -137,7 +137,7 @@ _Coming soon_
 ## 3. Foundations
 
 Implements the mathematical building blocks of neural networks from first principles,
-entirely in NumPy and early PyTorch, before any high-level abstractions are introduced.
+entirely in NumPy and early PyTorch, before any high level abstractions are introduced.
 
 ---
 
@@ -192,7 +192,7 @@ final operation in the generation pipeline before sampling.
 ### `foundations/loss.py`
 
 Implements binary cross-entropy (for binary classification) and categorical cross-entropy
-(for multi-class problems), both with an epsilon guard against `log(0)`. Cross-entropy
+(for multiclass problems), both with an epsilon guard against `log(0)`. Cross-entropy
 is the loss used during GPT training when reshaped to treat each token position
 independently.
 
@@ -208,7 +208,7 @@ the mechanics that PyTorch automates in the training loop.
 
 ### `foundations/multi_layer_backprop.py`
 
-Implements a full forward and backward pass through a two-layer network (`x -> Linear ->
+Implements a full forward and backward pass through a two layer network (`x -> Linear ->
 ReLU -> Linear -> MSE`), returning gradients for all four parameter tensors. This is the
 direct precursor to understanding how PyTorch's autograd engine propagates gradients
 through the transformer blocks.
@@ -219,15 +219,14 @@ through the transformer blocks.
 
 Implements an MLP forward pass for an arbitrary number of layers: applies
 `h = ReLU(h @ W + b)` through all hidden layers with no activation on the final output.
-Demonstrates how depth is composed from repeated application of the same linear-plus-
-activation pattern.
+Demonstrates how depth is composed from repeated application of the same linear + activation pattern.
 
 ---
 
 ### `foundations/pytorch_basics.py`
 
 Covers the foundational PyTorch tensor operations needed throughout the model: reshape,
-column-wise mean, concatenation, and MSE loss. These are the low-level tools that every
+column-wise mean, concatenation, and MSE loss. These are the low level tools that every
 subsequent module relies on.
 
 ---
@@ -236,7 +235,7 @@ subsequent module relies on.
 
 A concrete PyTorch `nn.Module` implementing an MNIST-style digit classifier:
 `Linear(784, 512) -> ReLU -> Dropout(0.2) -> Linear(512, 10) -> Sigmoid`. Introduces
-the `nn.Module` pattern, dropout as a regularization technique, and multi-output sigmoid
+the `nn.Module` pattern, dropout as a regularization technique, and multiple output sigmoid
 classification before the transformer's more complex module hierarchy is introduced.
 
 ---
@@ -263,7 +262,7 @@ chance to correct it.
 ### `foundations/training_diagnostics.py`
 
 Instruments a model's forward and backward pass to report activation mean, standard
-deviation, and dead-neuron fraction per linear layer, plus gradient mean, standard
+deviation, and dead neuron fraction per linear layer, plus gradient mean, standard
 deviation, and L2 norm. Classifies the network as healthy, suffering from dead neurons,
 or experiencing exploding or vanishing gradients based on a priority-ordered threshold
 check.
@@ -299,15 +298,15 @@ sequences using those mappings.
 
 Implements the byte-pair encoding (BPE) merge algorithm from scratch: repeatedly counts
 adjacent token pair frequencies, selects the most common pair (with lexicographic
-tiebreaking), merges all non-overlapping occurrences left-to-right, and records the merge
-rule. Running `num_merges` rounds produces the subword vocabulary that GPT-family models
+tiebreaking), merges all non-overlapping occurrences frin left to right, and records the merge
+rule. Running `num_merges` rounds produces the subword vocabulary that GPT family models
 use to balance vocabulary size against sequence length.
 
 ---
 
 ### `data/tokenizer_utils.py`
 
-Implements greedy longest-match tokenization over an existing vocabulary, as well as two
+Implements greedy longest match tokenization over an existing vocabulary, as well as two
 derived metrics: raw token count and fertility score (tokens per word). Fertility
 quantifies how efficiently a vocabulary represents a given piece of text; lower fertility
 means fewer tokens and faster inference.
@@ -318,7 +317,7 @@ means fewer tokens and faster inference.
 
 Builds a word-level integer vocabulary from a combined set of positive and negative
 example sentences, encodes each sentence, and pads all sequences to equal length using
-`nn.utils.rnn.pad_sequence`. Produces the padded, batch-first tensor that sequence
+`nn.utils.rnn.pad_sequence`. Produces the padded, batch first tensor that sequence
 classification training loops consume.
 
 ---
@@ -327,7 +326,7 @@ classification training loops consume.
 
 Implements the GPT dataset construction step: tokenizes a raw text corpus by whitespace,
 samples random starting indices, and constructs `(X, Y)` pairs where `Y` is `X` shifted
-right by one token. This shifted-pair structure is what makes next-token prediction a
+right by one token. This shifted pair structure is what makes next-token prediction a
 self-supervised task requiring no labels beyond the corpus itself.
 
 ---
@@ -335,7 +334,7 @@ self-supervised task requiring no labels beyond the corpus itself.
 ### `data/loader.py`
 
 Implements a tensor-based batched data loader that randomly samples `batch_size` starting
-positions from an already-encoded 1D corpus tensor, stacks the corresponding windows into
+positions from an already encoded 1D corpus tensor, stacks the corresponding windows into
 `(batch_size, context_length)` input and target matrices, and returns them. This is the
 direct data supplier for the training loop in `train.py`.
 
@@ -370,8 +369,8 @@ that injects sequence order information into the model.
 
 Implements layer normalization: normalizes each feature vector to zero mean and unit
 variance, then applies learned scale (`gamma`) and shift (`beta`) parameters. In the GPT
-model this is applied in the Pre-LN position, before each attention and feed-forward
-sub-layer, which stabilizes gradient flow in deep stacks.
+model this is applied in the Pre-LN position, before each attention and feed forward
+sublayer, which stabilizes gradient flow in deep stacks.
 
 ---
 
@@ -379,7 +378,7 @@ sub-layer, which stabilizes gradient flow in deep stacks.
 
 Implements RMS normalization, a simplified variant of layer norm that omits mean
 centering and the beta shift parameter, normalizing only by the root mean square of the
-input. Used in Llama-family models as a computationally cheaper alternative that retains
+input. Used in Llama family models as a computationally cheaper alternative that retains
 most of the training stability benefit.
 
 ---
@@ -397,9 +396,9 @@ batch structure and deployment behavior.
 ### `model/attention.py`
 
 Implements a single self-attention head: projects the input into queries, keys, and
-values; computes scaled dot-product scores `(Q @ K^T) / sqrt(head_dim)`; applies a
-causal lower-triangular mask so each position can only attend to earlier tokens; and
-returns the weighted sum of values. The causal mask is what makes this decoder-style
+values; computes scaled dot product scores `(Q @ K^T) / sqrt(head_dim)`; applies a
+causal lower triangular mask so each position can only attend to earlier tokens; and
+returns the weighted sum of values. The causal mask is what makes this decoder style
 attention suitable for language modeling.
 
 ---
@@ -415,12 +414,12 @@ the model attend to different aspects of context simultaneously within the same 
 
 ### `model/transformer.py`
 
-Composes multi-head attention and a two-layer position-wise feed-forward network (
+Composes multi-head attention and a two layer position-wise feed forward network (
 `Linear(d_model, 4*d_model) -> ReLU -> Linear(4*d_model, d_model) -> Dropout`) inside a
-Pre-LN residual block, where layer normalization precedes each sub-layer and the
-sub-layer output is added back to the input via a skip connection. Residual connections
+Pre-LN residual block, where layer normalization precedes each sublayer and the
+sublayer output is added back to the input via a skip connection. Residual connections
 allow gradients to flow directly to early layers without degrading through the full
-non-linear path.
+nonlinear path.
 
 ---
 
@@ -428,10 +427,10 @@ non-linear path.
 
 Implements grouped query attention (GQA): queries are projected to `num_heads` heads
 while keys and values use a smaller number of `num_kv_heads`, which are then
-`repeat_interleave`-expanded to match the query count before attention is computed. GQA
+`repeat_interleave` expanded to match the query count before attention is computed. GQA
 reduces KV cache memory footprint by a factor of `num_heads / num_kv_heads` at inference
 time with minimal impact on model quality, and is the attention variant used in
-production-scale models like Llama 2 70B and Mistral 7B.
+production scale models like Llama 2 70B and Mistral 7B.
 
 ---
 
@@ -476,7 +475,7 @@ decimal places.
 
 Implements autoregressive text generation: the model's context window is cropped to
 `context_length` if it exceeds the maximum, the model's forward pass produces logits for
-all positions, the final-position logits are converted to probabilities via softmax, the
+all positions, the final position logits are converted to probabilities via softmax, the
 next token is sampled using `torch.multinomial` with a seeded generator for
 reproducibility, that token is appended to the running context, and the decoded character
 is appended to the output string. This loop repeats for `new_chars` steps, expanding the
@@ -518,7 +517,7 @@ compute, it would learn to generate coherent text. Under the current conditions,
 not.
 
 The core constraint is data and scale. GPT-2's smallest configuration (117M parameters)
-was trained on 40 GB of WebText across tens of thousands of GPU-hours. The character-level
+was trained on 40 GB of WebText across tens of thousands of GPU hours. The character-level
 corpus used here is several orders of magnitude smaller, and the model is configured at a
 fraction of GPT-2's parameter count. At this scale, cross-entropy loss does decrease over
 training epochs, confirming that gradient flow and the optimization loop are functioning
