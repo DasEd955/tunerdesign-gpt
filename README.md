@@ -127,8 +127,6 @@ foundations/    Neural network primitives built from scratch
 
 ### GPT Architecture
 
-![GPT Architecture](architecture.png)
-
 ```mermaid
 flowchart TD
     RAW["Raw text corpus"]
