@@ -129,7 +129,8 @@ foundations/    Neural network primitives built from scratch
 ## 2. Architecture Diagrams
 
 ### Repository Architecture 
-_Coming Soon_
+
+![Repository Architecture](util/Repo-Architecture.png)
 
 ### GPT Architecture
 
