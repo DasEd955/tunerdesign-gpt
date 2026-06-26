@@ -147,7 +147,7 @@ flowchart TD
     J --> K["Output\n(batch, seq_len, 128)"]
 ```
 
-Pre-LN residual block: norm precedes each sublayer so gradients bypass the nonlinear path directly to earlier layers.
+Each transformer block applies two sublayers in sequence, each wrapped in a Pre-LN residual connection. The input first passes through LayerNorm and into multi-head self-attention, which runs 4 independent 32-dimensional heads in parallel before projecting their concatenated output back to 128 dimensions. The attention output is added back to the original input via a skip connection. That sum then goes through a second LayerNorm and into a position-wise feed forward network that projects up to 512 dimensions, applies ReLU, projects back down to 128, and applies dropout at rate 0.2 before a second skip connection produces the block output. Placing normalization before rather than after each sublayer (Pre-LN) keeps gradient magnitude stable as the signal passes through many stacked blocks.
 
 ### Attention Mechanism
 
@@ -170,7 +170,7 @@ flowchart TD
     M --> N["Attention Output\n(batch, seq_len, model_dim)"]
 ```
 
-Scaled dot-product attention with causal masking runs independently per head; outputs are concatenated and mixed through W_O.
+The input is linearly projected into three separate tensors: queries (Q), keys (K), and values (V), each of shape `(batch, seq_len, head_dim)`. Attention scores are computed as the dot product of Q and K transposed, scaled by `1 / sqrt(head_dim)` to prevent the softmax from saturating in high-dimensional spaces. A causal lower-triangular mask then sets all positions above the diagonal to negative infinity, which forces the softmax to assign zero probability to future tokens and makes this decoder-style attention suitable for language modeling. The resulting attention weights are applied to V via a weighted sum to produce each head's output. In multi-head attention, this full computation runs in parallel across all 4 heads independently, their outputs are concatenated along the feature dimension to restore model width, and a final learned projection W_O mixes information across heads before the result is passed to the transformer block's residual connection.
 
 ### Autoregressive Generation Pipeline
 
@@ -193,7 +193,7 @@ flowchart TD
     L -- No --> M["Return generated text"]
 ```
 
-At each decoding step only the final position logit is consumed; the full context is reprocessed unless a KV cache is attached.
+Generation is a loop that extends the context by one token per step. At the start of each step the running context is cropped to the model's maximum `context_length` if it has grown beyond that limit, ensuring the forward pass always receives a valid input shape. The full context is passed through the GPT, which returns logits of shape `(1, seq_len, vocab_size)`, and only the logits at the final sequence position are retained because that position conditions on all preceding tokens. Softmax converts those logits to a probability distribution over the vocabulary, and `torch.multinomial` draws a single sample from it using a seeded generator for reproducibility. The sampled integer index is decoded back to a character, appended to the output string, and also appended to the context tensor before the next iteration begins. This process repeats for `new_chars` steps, with the context window growing by one token each time and the model paying O(T^2) cost per step unless a KV cache is attached to skip reprocessing prior positions.
 
 ---
 
