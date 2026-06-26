@@ -68,15 +68,20 @@ stateful KV cache that appends newly projected keys and values to a running buff
 than recomputing the full sequence at each decoding step. `grouped_query_attention.py`
 implements the memory efficient attention variant used in Llama 2 and Mistral, where
 multiple query heads share a smaller number of key/value heads, reducing the KV cache
-footprint proportionally.
+footprint proportionally. `model.py` is the unified entry point: it defines `GPTConfig`
+(a dataclass that holds all hyperparameters), `create_model` (constructs a `GPT` from a
+config), `save_model` and `load_model` (persist and restore checkpoints to `saved_model/`),
+and `run` (wires vocabulary building, training via `train.py`, checkpoint saving, and
+generation via `generate.py` into a single callable).
 
-`train.py` closes the loop: it implements a standard language model training loop over
-the GPT model using AdamW optimization and cross-entropy loss, treating every position in
-the sequence as an independent next-token classification problem. `generate.py` implements
-autoregressive decoding: at each step the model receives the current context, produces a
-probability distribution over the vocabulary by applying softmax to the final position
-logits, samples the next token using multinomial sampling, appends it to the context, and
-repeats for however many characters are requested.
+`train.py` implements a standard language model training loop over the GPT model using
+AdamW optimization and cross-entropy loss, treating every position in the sequence as an
+independent next-token classification problem. `generate.py` implements autoregressive
+decoding: at each step the model receives the current context, produces a probability
+distribution over the vocabulary by applying softmax to the final position logits, samples
+the next token using multinomial sampling, appends it to the context, and repeats for
+however many characters are requested. Both modules are consumed by `model/model.py`
+rather than duplicating their logic.
 
 ---
 
@@ -84,10 +89,11 @@ repeats for however many characters are requested.
 
 ```
 model/          Attention, Transformer, GPT architecture
+  model.py                 GPTConfig, create_model, save_model, load_model, run
+  gpt.py                   GPT model
   attention.py             Self-attention head
   multi_head_attention.py  Multi-headed attention
   transformer.py           Transformer block
-  gpt.py                   GPT model
   normalization.py         Layer normalization
   batch_normalization.py   Batch normalization
   rms_normalization.py     RMS normalization
@@ -104,8 +110,10 @@ data/           Data pipeline
   nlp_preprocessing.py        NLP preprocessing
   tokenizer_utils.py          Tokenization edge cases
 
-train.py        GPT training loop
-generate.py     Text generation
+train.py        GPT training loop (used by model/model.py)
+generate.py     Text generation (used by model/model.py)
+
+saved_model/    Persisted model checkpoints (written by save_model)
 
 foundations/    Neural network primitives built from scratch
   neuron.py, backprop.py, mlp.py, activations.py, loss.py,
@@ -465,7 +473,7 @@ logits of shape `(B, T, vocab_size)`, these are reshaped to `(B*T, vocab_size)` 
 targets to `(B*T,)` so that cross-entropy treats every token position as an independent
 classification problem, gradients are computed via backpropagation, and AdamW applies
 weight updates with decoupled L2 regularization. Returns the final loss rounded to four
-decimal places.
+decimal places. Called internally by `model/model.py` via `TrainSolution.train`.
 
 ---
 
@@ -479,7 +487,27 @@ all positions, the final position logits are converted to probabilities via soft
 next token is sampled using `torch.multinomial` with a seeded generator for
 reproducibility, that token is appended to the running context, and the decoded character
 is appended to the output string. This loop repeats for `new_chars` steps, expanding the
-context by one token at each step.
+context by one token at each step. Called internally by `model/model.py` via
+`GenerateSolution.generate`.
+
+---
+
+## 7a. Model Module
+
+### `model/model.py`
+
+The unified entry point that bridges every layer of the system. `GPTConfig` is a
+dataclass that consolidates all hyperparameters (vocab size, context length, model
+dimension, number of blocks, number of heads, batch size, epochs, learning rate) in one
+place so that training and inference share an identical configuration rather than
+duplicating constants. `create_model(config)` constructs a `GPT` instance from a config.
+`save_model` writes the model state dict and config together to `saved_model/` as a
+single `.pt` checkpoint. `load_model` restores both the weights and the config from that
+checkpoint, rebuilding the model without requiring the caller to supply hyperparameters
+again. `run` is the top level entry point: it builds the vocabulary, encodes the corpus,
+constructs and trains the model by calling into `train.py`, saves the checkpoint, and
+generates sample text by calling into `generate.py`. Running `python model/model.py`
+directly executes a self contained demonstration on a short Shakespeare passage.
 
 ---
 
@@ -561,13 +589,33 @@ is the data and the compute.
 pip install -r requirements.txt
 ```
 
-**Train the model**
+**Train, generate, and save a checkpoint in one command**
+
+```bash
+python -m model.model
+```
+
+This runs the full pipeline: builds vocabulary, trains the GPT, writes the checkpoint to
+`saved_model/gpt.pt`, and prints generated text. To use a custom corpus or tune
+hyperparameters, import `run` or `GPTConfig` from `model.model`:
+
+```python
+from model.model import run, GPTConfig, create_model, load_model
+
+# Full pipeline from text to saved checkpoint
+run(training_text, epochs=500, model_dim=256)
+
+# Or load a saved checkpoint for generation only
+model, config = load_model("saved_model/gpt.pt")
+```
+
+**Train only**
 
 ```bash
 python train.py
 ```
 
-**Generate text**
+**Generate only**
 
 ```bash
 python generate.py

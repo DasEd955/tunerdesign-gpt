@@ -1,3 +1,6 @@
 # Virtual Enviroment
 .venv
 /venv
+
+# Model checkpoints
+/saved_model/
