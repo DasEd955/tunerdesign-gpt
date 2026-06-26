@@ -131,15 +131,69 @@ foundations/    Neural network primitives built from scratch
 
 ### Transformer Block
 
-_Coming soon_
+```mermaid
+flowchart TD
+    A["Input x\n(batch, seq_len, 128)"] --> B["LayerNorm"]
+    B --> C["Multi-Head Attention\n4 heads x 32-dim each"]
+    C --> D(("+"))
+    A --> D
+    D --> E["LayerNorm"]
+    E --> F["Linear: 128 -> 512"]
+    F --> G["ReLU"]
+    G --> H["Linear: 512 -> 128"]
+    H --> I["Dropout (p=0.2)"]
+    I --> J(("+"))
+    D --> J
+    J --> K["Output\n(batch, seq_len, 128)"]
+```
+
+Pre-LN residual block: norm precedes each sublayer so gradients bypass the nonlinear path directly to earlier layers.
 
 ### Attention Mechanism
 
-_Coming soon_
+```mermaid
+flowchart TD
+    A["Input x\n(batch, seq_len, model_dim)"] --> B["W_Q projection"]
+    A --> C["W_K projection"]
+    A --> D["W_V projection"]
+    B --> E["Q\n(batch, seq_len, head_dim)"]
+    C --> F["K\n(batch, seq_len, head_dim)"]
+    D --> G["V\n(batch, seq_len, head_dim)"]
+    E --> H["Q @ K^T / sqrt(head_dim)\n(batch, seq_len, seq_len)"]
+    F --> H
+    H --> I["Causal Mask\n(lower triangular, -inf above diagonal)"]
+    I --> J["Softmax (dim=-1)\nAttention Weights"]
+    J --> K["Weights @ V\n(batch, seq_len, head_dim)"]
+    G --> K
+    K --> L["[head_0 || head_1 || ... || head_n]\n(batch, seq_len, model_dim)"]
+    L --> M["Output Projection W_O\n(model_dim x model_dim)"]
+    M --> N["Attention Output\n(batch, seq_len, model_dim)"]
+```
+
+Scaled dot-product attention with causal masking runs independently per head; outputs are concatenated and mixed through W_O.
 
 ### Autoregressive Generation Pipeline
 
-_Coming soon_
+```mermaid
+flowchart TD
+    A["Initial Context\n(1, context_length)"] --> B{"context_len > max?"}
+    B -- Yes --> C["Crop: keep last context_length tokens"]
+    B -- No --> D["GPT Forward Pass\nlogits: (1, seq_len, vocab_size)"]
+    C --> D
+    D --> E["Slice final position\nlast_logits: (1, vocab_size)"]
+    E --> F["Softmax\nprobs: (1, vocab_size)"]
+    F --> G["torch.multinomial\n(seeded generator)"]
+    G --> H["next_token: int"]
+    H --> I["Append to context\ncontext: (1, seq_len + 1)"]
+    H --> J["Decode: int_to_char lookup"]
+    J --> K["Append char to output string"]
+    I --> L{"generated < new_chars?"}
+    K --> L
+    L -- Yes --> B
+    L -- No --> M["Return generated text"]
+```
+
+At each decoding step only the final position logit is consumed; the full context is reprocessed unless a KV cache is attached.
 
 ---
 
