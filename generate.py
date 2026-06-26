@@ -10,8 +10,8 @@ class Solution:
         # 4. Append sampled token to context with torch.cat
         # 5. Map token to character using int_to_char and accumulate result
         # 6. Repeat for desired number of new characters
-        generator = torch.manual_seed(0)
-        initial_state = generator.get_state()
+        generator = torch.Generator()
+        generator.manual_seed(0)
         result = list()
         for i in range(new_chars):
             # Crop context to max length the model can handle
@@ -23,9 +23,8 @@ class Solution:
             last_logits = logits[:, -1, :]      # (1, vocab_size)
             probs = nn.functional.softmax(last_logits, dim=-1)
 
-            # Sample next token & reset RNG for reproducibility
+            # Sample next token
             next_token = torch.multinomial(probs, 1, generator=generator)
-            generator.set_state(initial_state)
 
             # Append token to context & decode
             context = torch.cat((context, next_token), dim=-1)

@@ -19,7 +19,6 @@ class GPT(nn.Module):
         self.vocab_projection = nn.Linear(model_dim, vocab_size)
 
     def forward(self, context: TensorType[int]) -> TensorType[float]:
-        torch.manual_seed(0)
         # 1. Add token embeddings + position embeddings (use torch.arange for positions)
         # 2. Pass through transformer blocks
         # 3. Apply final LayerNorm, then project to vocab_size
@@ -89,7 +88,6 @@ class GPT(nn.Module):
                 self.dropout = nn.Dropout(0.2) # using p = 0.2
             
             def forward(self, x: TensorType[float]) -> TensorType[float]:
-                torch.manual_seed(0)
                 return self.dropout(self.down_projection(self.relu(self.up_projection(x))))
 
         def __init__(self, model_dim: int, num_heads: int):
@@ -101,7 +99,6 @@ class GPT(nn.Module):
             self.second_norm = nn.LayerNorm(model_dim)
 
         def forward(self, embedded: TensorType[float]) -> TensorType[float]:
-            torch.manual_seed(0)
             embedded = embedded + self.attention(self.first_norm(embedded)) # skip connection
             embedded = embedded + self.linear_network(self.second_norm(embedded)) # another skip connection
             return embedded
